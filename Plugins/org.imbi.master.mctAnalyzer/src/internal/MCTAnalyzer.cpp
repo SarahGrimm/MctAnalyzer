@@ -33,6 +33,15 @@ See LICENSE.txt or http://www.mitk.org for details.
 #include <vtkImageMedian3D.h>
 #include <mitkImageToSurfaceFilter.h>
 
+//itk
+#include <itkScalarImageToHistogramGenerator.h>
+#include <itkOtsuThresholdCalculator.h>
+#include <itkOtsuMultipleThresholdsCalculator.h>
+#include "itkExtractImageFilter.h"
+#include "itkBinaryMask3DMeshSource.h"
+#include "itkConnectedThresholdImageFilter.h"
+#include "itkNumericTraits.h"
+#include "itkMedianImageFilter.h"
 // Qt
 #include <QMessageBox>
 
@@ -160,7 +169,43 @@ void MCTAnalyzer::DoImageProcessing()
       MITK_INFO << message.str();
 
 	  // applies filter
-	  AccessByItk_1(image, ItkImageProcessing, image->GetGeometry());
+	  MctSegmentationFilter::Pointer filter = MctSegmentationFilter::New();
+	  filter->SetInput(image); // don't forget this
+
+	  filter->Update();
+
+
+	  mitk::DataNode::Pointer newNode = mitk::DataNode::New();
+	  newNode->SetData(filter->GetOutput());
+	  // set some properties
+	  newNode->SetProperty("binary", mitk::BoolProperty::New(true));
+	  newNode->SetProperty("name", mitk::StringProperty::New("dumb segmentation"));
+	  newNode->SetProperty("color", mitk::ColorProperty::New(0.0781, 0.19531, 1.0));
+
+	  //newNode->SetProperty("volumerendering", mitk::BoolProperty::New(true));
+	  //newNode->SetProperty("showVolume", mitk::BoolProperty::New(true));
+	  //newNode->SetProperty("reslice interpolation", mitk::BoolProperty::New(true));
+	  //newNode->SetProperty("layer", mitk::IntProperty::New(1));
+	  //newNode->SetProperty("opacity", mitk::FloatProperty::New(0.5));
+	  // add result to data tree
+	  this->GetDataStorage()->Add(newNode);
+
+	  mitk::ImageToSurfaceFilter::Pointer surfaceFilter = mitk::ImageToSurfaceFilter::New();
+	  surfaceFilter->SetInput(filter->GetOutput());
+	  surfaceFilter->SetThreshold(1);
+	  surfaceFilter->SetSmooth(true);
+	  //Downsampling
+	  surfaceFilter->SetDecimate(mitk::ImageToSurfaceFilter::DecimatePro);
+
+	  mitk::DataNode::Pointer surfaceNode = mitk::DataNode::New();
+	  surfaceNode->SetData(surfaceFilter->GetOutput());
+	  surfaceNode->SetProperty("color", mitk::ColorProperty::New(0.0781, 0.19531, 1.0));
+	  surfaceNode->SetOpacity(0.5);
+	  surfaceNode->SetName("Surface");
+	  this->GetDataStorage()->Add(surfaceNode);
+
+
+	  mitk::RenderingManager::GetInstance()->RequestUpdateAll();
 
     }
   }

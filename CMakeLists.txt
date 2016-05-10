@@ -232,6 +232,8 @@ set(${PROJECT_NAME}_SHARED_LINKER_FLAGS ${MITK_SHARED_LINKER_FLAGS})
 set(${PROJECT_NAME}_MODULE_LINKER_FLAGS ${MITK_MODULE_LINKER_FLAGS})
 
 # Add custom project flags here (e.g. for C++11 support)
+set(${PROJECT_NAME}_CXX_FLAGS "${${PROJECT_NAME}_CXX_FLAGS} /bigobj")
+set(${PROJECT_NAME}_ADDITIONAL_CXX_FLAGS " /bigobj")
 
 if(CMAKE_COMPILER_IS_GNUCXX)
   # Get the gcc version. Some MITK CMake macros rely on the CMake

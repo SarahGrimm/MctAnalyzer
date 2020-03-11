@@ -22,8 +22,11 @@ See LICENSE.txt or http://www.mitk.org for details.
 
 #include <QmitkAbstractView.h>
 #include <itkImage.h>
-
+#include <mitkImage.h>
+#include "mitkSurface.h"
+#include <chrono>
 #include "ui_MCTAnalyzerControls.h"
+
 
 
 /**
@@ -48,6 +51,17 @@ class MCTAnalyzer : public QmitkAbstractView
 
     /// \brief Called when the user clicks the GUI button
     void DoImageProcessing();
+	void ChooseDirectories();
+	void ShowPreview();
+	void ManualSegmentation();
+	void AddSegment();
+	void SetOutputDirectory();
+	void AddExamination();
+	void toggled(bool);
+	void ShowImages(bool);
+	void SaveThresholds(int, int, QString);
+	void setValue(int);
+	void ShowPoreVis(bool);
 
   protected:
 
@@ -61,9 +75,54 @@ class MCTAnalyzer : public QmitkAbstractView
 
     Ui::MCTAnalyzerControls m_Controls;
 private:
-	template < typename TPixel, unsigned int VImageDimension >
-	void ItkImageProcessing(itk::Image< TPixel, VImageDimension >* itkImage, mitk::BaseGeometry* imageGeometry);
 
+
+
+	struct Pore {
+		mitk::Point3D origin;
+		double radius;
+	};
+
+	struct Threshold {
+		int min;
+		int max;
+	};
+
+
+
+	QMap<int, QStringList > pathsForSample;
+	QString path;
+	QVBoxLayout *verticalLayout;
+	int counter = 0;
+	int examinationCounter = 0;
+	bool showImages = false;
+	std::map<QString, mitk::Image::Pointer> images; 
+	std::map<int, std::vector<Pore>> poreSizeRange;
+	std::map<QString, Threshold> thresholds;
+
+	void RemoveNode(const std::string& name);
+	bool ExistsNodeWithName(const std::string& name);
+	void DeleteAllNodes();
+
+	std::chrono::time_point<std::chrono::system_clock>          m_StartTime;
+	std::chrono::time_point<std::chrono::system_clock>          m_EndTime;
+	double center[3];
+	std::map<std::string, double> resultMap;
+	
+	mitk::Image::Pointer Generate3DImageFromImageStack(const QString&);
+	mitk::Image::Pointer ScaffoldSegmentation(const mitk::Image::Pointer originalImage, const QString&);
+	mitk::Image::Pointer MCTAnalyzer::CreateContourFromMask(const mitk::Image::Pointer  maski, const mitk::Image::Pointer);
+	mitk::Surface::Pointer CalculateScaffoldSurface(const mitk::Image::Pointer segmentedImage, double& surface, double, const mitk::Image::Pointer originalImage);
+	mitk::Surface::Pointer CalculateConvexSurface(const mitk::Surface::Pointer segmentedImage, double& surface, double);
+	mitk::Image::Pointer CreateMaskOfConvexSurface( mitk::Surface::Pointer segmentedImage,  mitk::Image::Pointer originalImage);
+	std::vector<double> FindPores(const mitk::Image::Pointer originalImage, double, int&, int&, const mitk::Image::Pointer  mask, const mitk::Surface::Pointer convexHull);
+	void DoHoughTransform(const mitk::Image::Pointer  maski);
+	void WriteResults(QString name, QString sample);
+	void WritePoreSizeRange(QString name, QString sample);
+	void GlobalReinit();
+
+	double op_volume(double i);
+	double op_volume2(double i) { return (1 / 6) * 3.14159265359 * std::pow(i, 3.0); }
 };
 
 #endif // MCTAnalyzer_h
